@@ -1,13 +1,16 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>AngularEssaie1</title>
-  <base href="/">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
-</head>
-<body>
-  <app-root></app-root>
-</body>
+<!doctype html>                 <!-- "ceci est une page HTML moderne" : toujours en 1re ligne -->
+<html lang="fr">                <!-- la page est en français -->
+  <head>                        <!-- les réglages de la page : rien ne s'affiche d'ici -->
+    <meta charset="utf-8" />    <!-- l'encodage : sans ça, les accents (é, à) s'afficheraient mal -->
+    <title>AngularEssaie1</title>  <!-- le texte dans l'onglet du navigateur -->
+    <base href="/" />           <!-- le point de départ des adresses : le routeur Angular s'en sert -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+                                <!-- "sur téléphone, adapte la page à la largeur de l'écran" -->
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+                                <!-- la petite icône de l'onglet (le fichier est dans public/) -->
+  </head>
+  <body>                        <!-- ce qui s'affiche -->
+    <app-root></app-root>       <!-- LA balise importante : c'est ici qu'Angular injecte votre composant App
+                                     (son selector est 'app-root'). Tout votre appli vit dans cette balise. -->
+  </body>
 </html>

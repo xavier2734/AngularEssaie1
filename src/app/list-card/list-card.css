@@ -1,0 +1,95 @@
+/*
+ * Styles du composant ListCard, déplacés depuis app.css. Ils ne s'appliquent qu'aux
+ * éléments de list-card.html : pas de risque de toucher le reste de la page.
+ */
+
+/* Une liste s'affiche comme une « carte » blanche aux coins arrondis. */
+.card {
+  padding: 1rem 1.25rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 15%);
+}
+
+/* L'en-tête d'une carte : le nom à gauche, puis le compteur et le bouton de suppression. */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+/* flex: 1 : le nom prend toute la place libre et pousse le reste à droite. */
+h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+/* Le compteur « réalisées / total », en petit sur fond gris clair. */
+.count {
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: #eceff7;
+  color: #555;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+/* Les tâches : une liste sans puces ni retrait. */
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Une tâche : la case et le texte à gauche, le bouton de suppression à droite. */
+li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.2rem 0;
+}
+
+/* La case à cocher et le texte d'une tâche, alignés et un peu espacés. */
+label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+/* Une tâche réalisée : texte barré et grisé. */
+.done {
+  text-decoration: line-through;
+  color: #888;
+}
+
+/* Le message « Aucune tâche ». */
+.empty {
+  color: #888;
+  font-style: italic;
+}
+
+/* Les boutons ✕ : discrets, ils passent au rouge quand la souris les survole. */
+.delete {
+  padding: 0.2rem 0.45rem;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: #aaa;
+  cursor: pointer;
+}
+
+.delete:hover {
+  background: #fdecea;
+  color: #c62828;
+}
+
+/* Le formulaire d'ajout d'une tâche, sous les tâches : le champ prend la place restante. */
+.new-task {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}

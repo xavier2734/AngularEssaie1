@@ -1,0 +1,66 @@
+/* Styles du composant App : ils ne touchent QUE app.html (pas les cartes). */
+
+/* Le bandeau bleu du haut. */
+header {
+  padding: 1rem 2rem;
+  background: #3949ab;
+  color: white;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+/* La zone sous le bandeau. */
+main {
+  padding: 1.5rem 2rem;
+}
+
+/* La grille de cartes : autant de colonnes (280px mini) que la largeur le permet. */
+.lists {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+  align-items: start;
+}
+
+/* Les messages gris en italique ("Aucune liste", "Chargement des listes…"). */
+.empty {
+  color: #888;
+  font-style: italic;
+}
+
+/* Le formulaire "nouvelle liste" : le champ et le bouton côte à côte (flex). */
+.new-list {
+  display: flex;
+  gap: 0.5rem;
+  max-width: 480px;
+  margin-bottom: 1.5rem;
+}
+
+/* NOUVEAU (étape 09) : le bandeau d'erreur. Fond rouge pâle, texte rouge foncé. */
+.error {
+  display: flex;              /* message et boutons sur une même ligne */
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #f5c2c0;
+  border-radius: 8px;         /* coins arrondis */
+  background: #fdecea;
+  color: #8e1c1c;
+}
+
+/* Le texte du message prend toute la place → pousse les boutons tout à droite. */
+.error span {
+  flex: 1;
+}
+
+/* NOUVEAU (étape 09) : le petit ✕ qui ferme le bandeau, sans bordure ni fond. */
+.close {
+  border: none;
+  background: none;
+  color: inherit;             /* même couleur que le texte du bandeau (rouge) */
+  cursor: pointer;            /* la petite main au survol */
+}

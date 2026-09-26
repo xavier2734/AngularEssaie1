@@ -1,1 +1,37 @@
-/* You can add global styles to this file, and also import other style files */
+/* Styles GLOBAUX : ils s'appliquent à toute la page, tous composants confondus. */
+
+/* Le fond gris clair de la page et la police. */
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #f1f3f8;
+  color: #222;
+}
+
+/* Les champs de saisie (class="field"), utilisés dans App ET dans les cartes.
+   C'est pour ça qu'ils sont ici, dans le fichier global, et pas dans un composant. */
+.field {
+  flex: 1;                     /* le champ prend toute la place dispo à côté du bouton */
+  min-width: 0;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #c5cae9;
+  border-radius: 6px;
+  font: inherit;
+}
+
+/* Les boutons bleus (class="button") : "Créer la liste", "Ajouter", "Recharger les listes". */
+.button {
+  padding: 0.45rem 0.9rem;
+  border: none;
+  border-radius: 6px;
+  background: #3949ab;
+  color: white;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Un bouton désactivé (champ vide) : bleu pâle + curseur "interdit". */
+.button:disabled {
+  background: #b0b6d9;
+  cursor: not-allowed;
+}

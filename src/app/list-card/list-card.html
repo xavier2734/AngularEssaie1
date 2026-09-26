@@ -1,0 +1,43 @@
+<section class="card">
+  <div class="card-header">
+    <h2 [class.done]="completed()">{{ list().name }}</h2>
+    @if (list().tasks.length > 0) {
+      <span class="count">{{ doneCount() }} / {{ list().tasks.length }}</span>
+    }
+    <button type="button" class="delete" title="Supprimer la liste" aria-label="Supprimer la liste"
+            (click)="deleteList.emit()">✕</button>
+  </div>
+
+  <ul>
+    @for (task of list().tasks; track task.id) {
+      <li>
+        <label [class.done]="task.done">
+          <!-- NOUVEAU : la case qui dit toujours la vérité.
+               AVANT : (change)="toggleTask.emit(task)" → le navigateur cochait la case TOUT DE SUITE ;
+                       si le serveur refusait ensuite, la case restait cochée alors que rien n'était enregistré.
+               MAINTENANT : on écoute (click) et on fait 2 choses, séparées par un ; :
+                 1. $event.preventDefault() → "navigateur, NE coche PAS la case toi-même"
+                 2. toggleTask.emit(task)   → on prévient App comme avant
+               Résultat : la case ne change QUE via [checked]="task.done", donc seulement quand
+               le serveur a répondu OK et que le signal a été mis à jour.
+               (On passe de (change) à (click) car un clic annulé ne déclenche pas d'événement change.) -->
+          <input type="checkbox" [checked]="task.done"
+                 (click)="$event.preventDefault(); toggleTask.emit(task)" />
+          {{ task.title }}
+        </label>
+        <button type="button" class="delete" title="Supprimer la tâche" aria-label="Supprimer la tâche"
+                (click)="deleteTask.emit(task)">✕</button>
+      </li>
+    } @empty {
+      <li class="empty">Aucune tâche pour l'instant.</li>
+    }
+  </ul>
+
+  <form class="new-task" (ngSubmit)="submitTask()">
+    <input type="text" class="field" name="title" placeholder="Nouvelle tâche"
+       aria-label="Nouvelle tâche" maxlength="200"
+       [ngModel]="newTaskTitle()"
+       (ngModelChange)="newTaskTitle.set($event)" />
+    <button type="submit" class="button" [disabled]="!newTaskTitle().trim()">Ajouter</button>
+  </form>
+</section>
