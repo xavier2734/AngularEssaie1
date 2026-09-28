@@ -1,0 +1,55 @@
+/* :host = la balise <app-account-panel> elle-même : elle s'affiche en bloc. */
+:host {
+  display: block;
+}
+
+/* Le formulaire et la barre "Connecté" : éléments en ligne, qui passent à la ligne si besoin. */
+.login,
+.connected {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Les champs Identifiant et Mot de passe. */
+input {
+  width: 9rem;
+  padding: 0.35rem 0.5rem;
+  border: none;
+  border-radius: 6px;
+  font: inherit;
+}
+
+/* Bouton principal ("Se connecter") : fond blanc, texte bleu. */
+button {
+  padding: 0.35rem 0.7rem;
+  border: 1px solid white;
+  border-radius: 6px;
+  background: white;
+  color: #3949ab;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Boutons secondaires : juste un contour blanc. */
+.secondary {
+  background: transparent;
+  color: white;
+}
+
+/* Bouton grisé (champs vides ou requête en cours). */
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Le message d'erreur, sur fond clair pour rester lisible sur le bleu. */
+.message {
+  margin: 0.5rem 0 0;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  background: #fdecea;
+  color: #8e1c1c;
+  font-size: 0.9rem;
+}

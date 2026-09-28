@@ -1,7 +1,13 @@
 /* Styles du composant App : ils ne touchent QUE app.html (pas les cartes). */
 
 /* Le bandeau bleu du haut. */
+/* L'en-tête : le titre à gauche, le panneau du compte à droite. */
 header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
   padding: 1rem 2rem;
   background: #3949ab;
   color: white;
@@ -36,7 +42,7 @@ main {
   display: flex;
   gap: 0.5rem;
   max-width: 480px;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.5rem;
 }
 
 /* NOUVEAU (étape 09) : le bandeau d'erreur. Fond rouge pâle, texte rouge foncé. */
@@ -63,4 +69,11 @@ main {
   background: none;
   color: inherit;             /* même couleur que le texte du bandeau (rouge) */
   cursor: pointer;            /* la petite main au survol */
+}
+
+/* La ligne d'état de la synchronisation, discrète, sous le formulaire. */
+.sync-status {
+  margin: 0 0 1.5rem;
+  color: #666;
+  font-size: 0.9rem;
 }

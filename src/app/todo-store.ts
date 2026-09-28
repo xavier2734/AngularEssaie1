@@ -1,131 +1,158 @@
-// NOUVEAU : HttpErrorResponse = le type de l'objet qu'on reçoit quand une requête ÉCHOUE.
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { Task, TodoList } from './todo';
+import { AuthStore } from './auth-store';
+import { errorMessage } from './error-message';
 
 @Injectable({ providedIn: 'root' })
 export class TodoStore {
   private readonly http = inject(HttpClient);
+  private readonly auth = inject(AuthStore);   // pour oublier une session refusée (erreur 401)
 
-  // L'état du service = 3 signaux. Pour chacun : une version privée MODIFIABLE (writableXxx),
-  // et une version publique en LECTURE SEULE pour les composants.
-
-  // 1. Les listes (comme avant).
+  // Les listes (lecture seule pour les composants).
   private readonly writableLists = signal<TodoList[]>([]);
   readonly lists = this.writableLists.asReadonly();
 
-  // 2. NOUVEAU : "est-ce qu'on est en train de charger ?" → App affichera "Chargement…".
+  // true pendant le chargement → "Chargement…"
   private readonly writableLoading = signal(false);
   readonly loading = this.writableLoading.asReadonly();
 
-  // 3. NOUVEAU : le message d'erreur à afficher, ou null quand tout va bien.
-  //    <string | null> = "un texte OU null".
+  // NOUVEAU : true pendant l'envoi → "Envoi des listes au serveur…"
+  private readonly writableSaving = signal(false);
+  readonly saving = this.writableSaving.asReadonly();
+
+  // Le message d'erreur, ou null.
   private readonly writableError = signal<string | null>(null);
   readonly error = this.writableError.asReadonly();
+
+  // NOUVEAU : 3 simples variables internes (pas des signaux : jamais affichées).
+  private loaded = false;               // les listes ont-elles été reçues ? (avant : on n'envoie RIEN)
+  private sending = false;              // un envoi est-il en route ?
+  private changedWhileSending = false;  // les listes ont-elles changé pendant cet envoi ?
 
   constructor() {
     this.load();
   }
 
-  /*
-   * NOUVEAU : subscribe reçoit maintenant un OBJET { } avec 2 fonctions :
-   *   .subscribe({
-   *     next:  (réponse) => { ... },   // appelée si ça a MARCHÉ
-   *     error: (erreur)  => { ... },   // appelée si ça a ÉCHOUÉ (à la place de next)
-   *   });
-   * Une seule des deux est appelée, jamais les deux.
-   */
-
-  /** Charge toutes les listes. */
+  /** Lire toutes les listes : GET /api/sync. */
   load(): void {
-    this.writableLoading.set(true);   // on commence → "Chargement…" s'affiche
-    this.writableError.set(null);     // on efface une ancienne erreur (utile pour le bouton "Recharger")
-    this.http.get<TodoList[]>('/api/lists').subscribe({
+    this.loaded = false;
+    this.changedWhileSending = false;
+    this.writableLoading.set(true);
+    this.writableError.set(null);
+    this.http.get<TodoList[]>('/api/sync').subscribe({
       next: (lists) => {
         this.writableLists.set(lists);
-        this.writableLoading.set(false);   // fini
+        this.loaded = true;                 // à partir de maintenant, on a le droit d'envoyer
+        this.writableLoading.set(false);
       },
       error: (error: HttpErrorResponse) => {
-        this.showError(error);             // on range un message lisible dans error
-        this.writableLoading.set(false);   // fini AUSSI ! Sinon "Chargement…" resterait pour toujours
+        this.showError(error);
+        this.writableLoading.set(false);
       },
     });
   }
 
-  // Pour toutes les autres méthodes, même recette :
-  //   next  = ce qu'on faisait avant dans le subscribe (mettre à jour le signal) ;
-  //   error = showError(error).
-  // "next: (list) => ..." sur une seule ligne : pas besoin d'accolades, la fonction fait juste ça.
+  /** NOUVEAU : bouton "Réessayer" → recharger si rien n'a été reçu, sinon renvoyer. */
+  retry(): void {
+    if (this.loaded) {
+      this.sync();
+    } else {
+      this.load();
+    }
+  }
 
-  /** Crée une liste. */
+  // Les actions : 1. on modifie les listes ICI, tout de suite ; 2. on appelle sync().
+
   createList(name: string): void {
-    this.http.post<TodoList>('/api/lists', { name: name }).subscribe({
-      next: (list) => this.writableLists.update((lists) => [...lists, list]),
-      error: (error: HttpErrorResponse) => this.showError(error),
-    });
+    const list: TodoList = { id: this.newId(), name: name, tasks: [] };
+    this.writableLists.update((lists) => [...lists, list]);
+    this.sync();
   }
 
-  /** Supprime une liste. */
   deleteList(list: TodoList): void {
-    this.http.delete(`/api/lists/${list.id}`).subscribe({
-      next: () =>
-        this.writableLists.update((lists) => lists.filter((current) => current.id !== list.id)),
-      error: (error: HttpErrorResponse) => this.showError(error),
-    });
+    this.writableLists.update((lists) => lists.filter((current) => current.id !== list.id));
+    this.sync();
   }
 
-  /** Ajoute une tâche. */
   addTask(list: TodoList, title: string): void {
-    this.http.post<Task>(`/api/lists/${list.id}/tasks`, { title: title }).subscribe({
-      next: (task) => this.updateTasks(list, (tasks) => [...tasks, task]),
-      error: (error: HttpErrorResponse) => this.showError(error),
-    });
+    const task: Task = { id: this.newId(), title: title, done: false };
+    this.updateTasks(list, (tasks) => [...tasks, task]);
+    this.sync();
   }
 
-  /** Coche / décoche une tâche. */
   toggleTask(list: TodoList, task: Task): void {
-    this.http.patch<Task>(`/api/tasks/${task.id}`, { done: !task.done }).subscribe({
-      next: (changed) =>
-        this.updateTasks(list, (tasks) =>
-          tasks.map((current) => (current.id === changed.id ? changed : current)),
-        ),
-      error: (error: HttpErrorResponse) => this.showError(error),
-    });
+    this.updateTasks(list, (tasks) =>
+      tasks.map((current) =>
+        current.id === task.id ? { ...current, done: !current.done } : current,
+      ),
+    );
+    this.sync();
   }
 
-  /** Supprime une tâche. */
   deleteTask(list: TodoList, task: Task): void {
-    this.http.delete(`/api/tasks/${task.id}`).subscribe({
-      next: () =>
-        this.updateTasks(list, (tasks) => tasks.filter((current) => current.id !== task.id)),
-      error: (error: HttpErrorResponse) => this.showError(error),
-    });
+    this.updateTasks(list, (tasks) => tasks.filter((current) => current.id !== task.id));
+    this.sync();
   }
 
-  /** NOUVEAU : le ✕ du bandeau rouge → on efface le message. */
   clearError(): void {
     this.writableError.set(null);
   }
 
-  /** NOUVEAU : transforme une erreur technique en phrase lisible pour l'utilisateur. */
-  private showError(error: HttpErrorResponse): void {
-    // error.error = le CORPS de la réponse d'erreur.
-    // Quand le serveur Java refuse une requête, il répond par exemple {"error": "La tâche 3 n'existe pas."}
-    // → le message est donc dans error.error.error. (Oui, trois fois "error", c'est moche mais c'est ça.)
-    // ?. = "si error.error est vide (null), n'essaie pas de lire .error dedans : renvoie undefined au lieu de planter".
-    const serverMessage = error.error?.error;
-    if (typeof serverMessage === 'string') {
-      // Le serveur a donné une explication → on l'affiche telle quelle.
-      this.writableError.set(serverMessage);
-    } else {
-      // Pas d'explication → le serveur n'a pas répondu du tout (il est arrêté).
-      this.writableError.set('Impossible de joindre le serveur. Est-il bien lancé ?');
+  /** NOUVEAU : envoie TOUTES les listes : PUT /api/sync. Un seul envoi à la fois. */
+  sync(): void {
+    if (!this.loaded) {
+      return;                         // pas encore reçu → surtout ne pas envoyer un tableau vide
     }
-    // Le détail technique va dans la console (F12) : utile au développeur, pas à l'utilisateur.
-    console.error(error);
+    if (this.sending) {
+      this.changedWhileSending = true; // un envoi est déjà en route → on note qu'il faudra renvoyer
+      return;
+    }
+    this.sending = true;
+    this.writableSaving.set(true);
+    this.http.put('/api/sync', this.writableLists()).subscribe({
+      next: () => {
+        this.writableError.set(null);  // envoi réussi → l'ancienne erreur n'a plus lieu d'être
+        this.sendFinished();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.showError(error);
+        this.sendFinished();
+      },
+    });
   }
 
-  // Inchangée.
+  /** NOUVEAU : fin d'un envoi → on renvoie si les listes ont changé entre-temps. */
+  private sendFinished(): void {
+    this.sending = false;
+    if (this.changedWhileSending) {
+      this.changedWhileSending = false;
+      this.sync();                     // on renvoie l'état le plus récent
+    } else {
+      this.writableSaving.set(false);
+    }
+  }
+
+  /** NOUVEAU : c'est le navigateur qui choisit les numéros : le plus grand + 1. */
+  private newId(): number {
+    // flatMap : un seul tableau avec l'id de chaque liste ET ceux de ses tâches.
+    const ids = this.writableLists().flatMap((list) => [
+      list.id,
+      ...list.tasks.map((task) => task.id),
+    ]);
+    // Math.max(0, ...ids) : le plus grand, ou 0 s'il n'y a rien.
+    return Math.max(0, ...ids) + 1;
+  }
+
+  private showError(error: HttpErrorResponse): void {
+  // 401 = le serveur ne reconnaît plus notre jeton (session expirée…) → on l'oublie.
+  if (error.status === 401) {
+    this.auth.forget();
+  }
+  this.writableError.set(errorMessage(error));
+  console.error(error);
+}
+
   private updateTasks(list: TodoList, change: (tasks: Task[]) => Task[]): void {
     this.writableLists.update((lists) =>
       lists.map((current) =>

@@ -1,24 +1,21 @@
 <header>
   <h1>{{ title }}</h1>
+  <app-account-panel />
 </header>
 
+
+
 <main>
-  <!-- NOUVEAU : le bandeau rouge, SEULEMENT s'il y a un message.
-       @if (store.error(); as message) = "si error() a une valeur, appelle-la 'message' dans ce bloc".
-       Un texte = vrai, null = faux → pas d'erreur, pas de bandeau.
-       role="alert" : un lecteur d'écran l'annonce dès qu'il apparaît. -->
   @if (store.error(); as message) {
     <div class="error" role="alert">
       <span>{{ message }}</span>
-      <!-- Relance le chargement (utile après avoir relancé le serveur). -->
-      <button type="button" class="button" (click)="store.load()">Recharger les listes</button>
-      <!-- Ferme juste le bandeau. -->
+      <!-- CHANGÉ : "Réessayer" appelle retry() (recharge OU renvoie selon ce qui a échoué). -->
+      <button type="button" class="button" (click)="store.retry()">Réessayer</button>
       <button type="button" class="close" title="Fermer le message" aria-label="Fermer le message"
               (click)="store.clearError()">✕</button>
     </div>
   }
 
-  <!-- Le formulaire "nouvelle liste" : identique. -->
   <form class="new-list" (ngSubmit)="createList()">
     <input
       type="text"
@@ -28,12 +25,23 @@
       aria-label="Nom de la nouvelle liste"
       maxlength="100"
       [ngModel]="newListName()"
-(ngModelChange)="newListName.set($event)"
+      (ngModelChange)="newListName.set($event)"
     />
     <button type="submit" class="button" [disabled]="!newListName().trim()">Créer la liste</button>
   </form>
 
-  <!-- NOUVEAU : pendant le chargement, un message À LA PLACE des cartes. -->
+  <!-- NOUVEAU : l'état de la synchronisation. -->
+  <p class="sync-status">
+  @if (store.saving()) {
+    Envoi des listes au serveur…
+  } @else if (auth.username()) {
+    Vos listes sont enregistrées dans le compte « {{ auth.username() }} ».
+  } @else {
+    Mode test : vos listes sont envoyées au serveur, mais il ne les conserve pas. Connectez-vous
+    pour les enregistrer.
+  }
+</p>
+
   @if (store.loading()) {
     <p class="empty">Chargement des listes…</p>
   } @else {
@@ -47,8 +55,6 @@
           (deleteList)="deleteList(list)"
         />
       } @empty {
-        <!-- NOUVEAU : en cas d'erreur, le tableau est vide… mais dire "Aucune liste" serait FAUX :
-             il y en a peut-être, on n'a juste pas pu les lire. Donc on ne l'affiche que s'il n'y a PAS d'erreur. -->
         @if (!store.error()) {
           <p class="empty">Aucune liste pour l'instant. Créez-en une avec le formulaire ci-dessus.</p>
         }
