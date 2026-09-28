@@ -1,10 +1,11 @@
 import { Component, computed, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Task, TodoList } from '../todo';   // ../ = on remonte d'un dossier (on est dans list-card/)
+import { TaskCountPipe } from '../shared/task-count-pipe';
 
 @Component({
   selector: 'app-list-card',        // la balise <app-list-card> utilisée dans app.html
-  imports: [FormsModule],           // la carte a son propre formulaire → besoin de ngModel
+  imports: [FormsModule, TaskCountPipe],          // la carte a son propre formulaire → besoin de ngModel
   templateUrl: './list-card.html',
   styleUrl: './list-card.css',
 })

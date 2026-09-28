@@ -8,6 +8,8 @@
             (click)="deleteList.emit()">✕</button>
   </div>
 
+  <p class="summary">{{ list().tasks.length | taskCount }}</p>
+
   <ul>
     @for (task of list().tasks; track task.id) {
       <li>

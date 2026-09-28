@@ -81,4 +81,30 @@ describe('AuthStore et authInterceptor', () => {
     expect(refused).toBe(true);
     expect(auth.username()).toBeNull();
   });
+    it('supprime le compte, puis oublie la session', () => {
+    localStorage.setItem('todolist-session', JSON.stringify(session));
+    const auth = TestBed.inject(AuthStore);
+    const server = TestBed.inject(HttpTestingController);
+
+    auth.deleteAccount().subscribe();
+    server.expectOne({ method: 'DELETE', url: '/api/accounts/me' }).flush(null);
+
+    expect(auth.username()).toBeNull();
+  });
+
+  it('ignore une session illisible dans le localStorage', () => {
+    localStorage.setItem('todolist-session', '{pas du json');   // du texte cassé
+
+    const auth = TestBed.inject(AuthStore);
+
+    expect(auth.username()).toBeNull();                       // pas de plantage : pas connecté
+  });
+    it("ne prévient pas le serveur si on se déconnecte sans être connecté", () => {
+    const auth = TestBed.inject(AuthStore);
+
+    auth.logout();                                        // pas de session → pas de jeton
+
+    expect(auth.username()).toBeNull();
+    // Pas d'expectOne : si un DELETE partait, verify() (dans afterEach) ferait échouer le test.
+  });
 });

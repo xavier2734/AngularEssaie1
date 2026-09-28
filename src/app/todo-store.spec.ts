@@ -95,4 +95,63 @@ describe('TodoStore', () => {
     expect(store.loading()).toBe(false);
     expect(store.error()).toBe('Impossible de joindre le serveur. Est-il bien lancé ?');
   });
+    it('supprime une tâche puis une liste, et envoie à chaque fois', () => {
+    server.expectOne('/api/sync').flush(lists);
+
+    store.deleteTask(store.lists()[0], store.lists()[0].tasks[0]);
+    server.expectOne({ method: 'PUT', url: '/api/sync' }).flush(null);
+    expect(store.lists()[0].tasks).toEqual([]);
+
+    store.deleteList(store.lists()[0]);
+    server.expectOne({ method: 'PUT', url: '/api/sync' }).flush(null);
+    expect(store.lists()).toEqual([]);
+  });
+
+  it("réessaie le CHARGEMENT si les listes n'ont jamais été reçues", () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    server.expectOne('/api/sync').flush(null, { status: 502, statusText: 'Bad Gateway' });
+
+    store.retry();                                   // rien reçu → on recharge (GET)
+    server.expectOne('/api/sync').flush(lists);
+
+    expect(store.lists()).toEqual(lists);
+  });
+
+  it("réessaie l'ENVOI si c'est l'envoi qui a échoué", () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    server.expectOne('/api/sync').flush(lists);
+
+    store.createList('A');
+    server.expectOne({ method: 'PUT', url: '/api/sync' }).flush(null, { status: 502, statusText: 'Bad Gateway' });
+    expect(store.error()).not.toBeNull();            // l'envoi a échoué
+    expect(store.saving()).toBe(false);
+
+    store.retry();                                   // déjà reçu → on renvoie (PUT)
+    server.expectOne({ method: 'PUT', url: '/api/sync' }).flush(null);
+    expect(store.error()).toBeNull();                // l'envoi a réussi → l'erreur disparaît
+  });
+
+  it('oublie la session si le serveur refuse le jeton (401)', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    localStorage.setItem('todolist-session', JSON.stringify({ token: 'vieux', username: 'alice' }));
+
+    server
+      .expectOne('/api/sync')
+      .flush({ error: 'Session inconnue ou expirée : reconnectez-vous.' }, { status: 401, statusText: 'Unauthorized' });
+
+    expect(localStorage.getItem('todolist-session')).toBeNull();   // la session a été oubliée
+    expect(store.error()).toBe('Session inconnue ou expirée : reconnectez-vous.');
+  });
+    it("en cochant une tâche, ne touche pas aux autres tâches de la liste", () => {
+    // Cette fois, une liste avec DEUX tâches.
+    server.expectOne('/api/sync').flush([
+      { id: 1, name: 'Courses', tasks: [{ id: 2, title: 'Pain', done: false }, { id: 3, title: 'Lait', done: false }] },
+    ]);
+
+    store.toggleTask(store.lists()[0], store.lists()[0].tasks[0]);   // on coche "Pain"
+    server.expectOne({ method: 'PUT', url: '/api/sync' }).flush(null);
+
+    expect(store.lists()[0].tasks[0].done).toBe(true);    // Pain : cochée
+    expect(store.lists()[0].tasks[1].done).toBe(false);   // Lait : pas touchée (le "sinon" du ? :)
+  });
 });

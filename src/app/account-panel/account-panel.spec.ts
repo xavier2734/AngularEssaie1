@@ -84,4 +84,59 @@ describe('AccountPanel', () => {
 
     expect(page.querySelector('form')).not.toBeNull();   // le formulaire de connexion est revenu
   });
+    // Petit outil : se connecter en tant qu'alice.
+  async function login(): Promise<void> {
+    await fillForm('alice', 'motdepasse');
+    page.querySelector('form')!.dispatchEvent(new Event('submit'));
+    server.expectOne('/api/sessions').flush({ token: 'jeton', username: 'alice' });
+    server.expectOne('/api/sync').flush([]);
+    await fixture.whenStable();
+  }
+
+  it('affiche le message du serveur si la création de compte est refusée', async () => {
+    await fillForm('alice', 'motdepasse');
+
+    page.querySelectorAll<HTMLButtonElement>('form button')[1].click();   // "Créer un compte"
+    server
+      .expectOne('/api/accounts')
+      .flush({ error: 'Cet identifiant est déjà pris.' }, { status: 409, statusText: 'Conflict' });
+    await fixture.whenStable();
+
+    expect(page.querySelector('.message')!.textContent).toContain('Cet identifiant est déjà pris.');
+  });
+
+  it('supprime le compte après confirmation', async () => {
+    await login();
+    vi.spyOn(window, 'confirm').mockReturnValue(true);        // on répond "OK"
+
+    page.querySelectorAll<HTMLButtonElement>('.connected button')[1].click();   // "Supprimer mon compte"
+    server.expectOne({ method: 'DELETE', url: '/api/accounts/me' }).flush(null);
+    server.expectOne('/api/sync').flush([]);
+    await fixture.whenStable();
+
+    expect(page.querySelector('form')).not.toBeNull();        // retour au formulaire de connexion
+  });
+
+  it('ne supprime rien si on annule', async () => {
+    await login();
+    vi.spyOn(window, 'confirm').mockReturnValue(false);       // on répond "Annuler"
+
+    page.querySelectorAll<HTMLButtonElement>('.connected button')[1].click();
+    await fixture.whenStable();
+
+    expect(page.textContent).toContain('Connecté');           // aucune requête, toujours connecté
+  });
+
+  it('affiche le message si la suppression du compte échoue', async () => {
+    await login();
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    page.querySelectorAll<HTMLButtonElement>('.connected button')[1].click();
+    server
+      .expectOne('/api/accounts/me')
+      .flush({ error: 'Suppression impossible.' }, { status: 500, statusText: 'Server Error' });
+    await fixture.whenStable();
+
+    expect(page.querySelector('.message')!.textContent).toContain('Suppression impossible.');
+  });
 });
